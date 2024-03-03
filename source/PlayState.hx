@@ -54,7 +54,7 @@ class PlayState extends FlxState
 			var user = Github.getUser(myFollowers[i].login);
 
 			// It will give a Request to get the Image Bytes
-			var requestBytes = Github.githubRequestBytes(user.avatar_url + '&size=40');
+			var requestBytes = Github._requestBytes(user.avatar_url + '&size=40');
 
 			// will Create a Bitmap in FlxG to Later Be Used in the User Icon
 			var bitmapImage = FlxG.bitmap.add(BitmapData.fromBytes(requestBytes), false, 'GithubFollower:${user.login}');
