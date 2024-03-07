@@ -1,5 +1,6 @@
 package;
 
+import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
@@ -14,111 +15,141 @@ import openfl.display.BitmapData;
 
 using StringTools;
 
+typedef UserGroup = {
+	var image:FlxSprite;
+	var text:FlxText;
+}
+
 class PlayState extends FlxState
 {
-	var curSelected = 0;
-	var max = 0;
-	var camFollow:FlxObject;
+	public var _used_user:String = 'GuineaPigUuhh';
+	public var _default_notSelected:Float = 0.75;
+
+	var curSelected:Int = 0;
 
 	var myFollowers:Dynamic = null;
+	var total_users:Int = 0;
 
-	var usersText:Array<FlxText> = [];
+	var camObject:FlxObject;
+
+	var usersAssets:Array<UserGroup> = [];
 
 	override public function create()
 	{
 		super.create();
 
-		// Cool Backdrop to stay cool
-		var grid = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x2C00FF95, 0x0));
-		grid.scrollFactor.set();
-		grid.velocity.set(25, 25);
-		add(grid);
+		FlxG.mouse.visible = false;
+
+		// to the Cam Follow this Object
+		camObject = new FlxObject(80, 0, 0, 0);
+		camObject.screenCenter(X);
+
+		// New BG to Stay Cool
+		var bg:FlxSprite = new FlxSprite(0, 0, _githubImage('https://raw.githubusercontent.com/GuineaPigUuhh/GuineaPigUuhh/main/background.png'));
+		bg.screenCenter();
+		bg.scale.set(0.3, 0.3);
+		bg.scrollFactor.set();
+		add(bg);
 
 		// it will take my User Data and parse it
-		var myUser:Dynamic = Github.getUser('GuineaPigUuhh');
+		var myUser:Dynamic = Github.getUser(_used_user);
 
 		// will get my Followers from my Github
-		myFollowers = Github.githubParse(myUser.followers_url);
-
-		// set The Variable Max
-		max = myFollowers.length;
-
-		// It will be used to identify which user you are seeing
-		camFollow = new FlxObject(80, 0, 0, 0);
-		camFollow.screenCenter(X);
+		myFollowers = Github._easyparse(myUser.followers_url);
+		total_users = myFollowers.length;
 
 		// Loop to Create the Objects
-		for (i in 0...max)
+		for (i in 0...total_users)
 		{
 			// Get the Full User Data
-			var user = Github.getUser(myFollowers[i].login);
-
-			// It will give a Request to get the Image Bytes
-			var requestBytes = Github._requestBytes(user.avatar_url + '&size=40');
-
-			// will Create a Bitmap in FlxG to Later Be Used in the User Icon
-			var bitmapImage = FlxG.bitmap.add(BitmapData.fromBytes(requestBytes), false, 'GithubFollower:${user.login}');
+			var this_user = Github.getUser(myFollowers[i].login);
 
 			// new FlxSprite to The User Profile
-			var userImage = new FlxSprite(20, 35 + (60 * i), bitmapImage);
+			var userSprite = new FlxSprite(20, 35 + (60 * i), 
+			    _githubImage(this_user.avatar_url + '&size=43', 'Follower:${this_user.login}'));
 
 			// new FlxText to The User Name
-			var userText = new FlxText(80, 40 + (60 * i), 0, user.login, 20);
+			var userText = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
+			userText.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
+
+			// set Alpha
+			userSprite.alpha = _default_notSelected;
+			userText.alpha = _default_notSelected;
 
 			// Add Items
-			add(userImage);
+			add(userSprite);
 			add(userText);
 
-			// will give a push to be used on CamFollow
-			usersText.push(userText);
+			// Import Assets to usersAssets
+			usersAssets.push({
+				image: userSprite,
+				text: userText
+			});
 		}
 
 		// Cool Text to stay cool
-		var followUser = new FlxText(0, 40, 0, myUser.login + ' Followers' + ' (Total: $max)', 25);
+		var followUser = new FlxText(0, 40, 0, myUser.login + ' Followers' + ' (Total: $total_users)', 25);
 		followUser.screenCenter(X);
+		followUser.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
 		followUser.scrollFactor.set();
-		followUser.alpha = 0.5;
+		followUser.alpha = 0.65;
 		add(followUser);
 
 		// Change The Item
 		changeItem();
 
-		// Follow the CamFollow
-		FlxG.camera.follow(camFollow, LOCKON, 0.1);
+		// Follow Object Camera
+		FlxG.camera.follow(camObject, LOCKON, 0.5);
 	}
 
-	function changeItem(i:Int = 0)
+	function changeItem(number:Int = 0)
 	{
+		// set text to default
+		usersAssets[curSelected].text.alpha = _default_notSelected;
+		usersAssets[curSelected].image.alpha = _default_notSelected;
+
 		// Change the User you are selected
-		curSelected = FlxMath.wrap(curSelected + i, 0, max - 1);
+		curSelected = FlxMath.wrap(curSelected + number, 0, total_users - 1);
 
-		// Change the camera position to the selected User
-		camFollow.y = usersText[curSelected].y;
-
-		// Leave all text as default
-		for (i in 0...max)
-			usersText[i].text = myFollowers[i].login;
+		// Camera
+		camObject.y = usersAssets[curSelected].text.y;
 
 		// set the text you have selected
-		usersText[curSelected].text = '> ' + myFollowers[curSelected].login + ' <';
+		usersAssets[curSelected].text.alpha = 1;
+		usersAssets[curSelected].image.alpha = 1;
 	}
 
 	override public function update(elapsed:Float)
 	{
 		/* Keyboard Commands */
-		if (FlxG.keys.justPressed.UP)
+		if (FlxG.keys.justPressed.UP || FlxG.keys.justPressed.W)
 			changeItem(-1);
-		else if (FlxG.keys.justPressed.DOWN)
+		else if (FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.S)
 			changeItem(1);
 
 		// To Reset the State
 		if (FlxG.keys.justPressed.R)
 			FlxG.resetState();
-
+		
 		// When you press ENTER on the keyboard, you will enter the user's Github
 		if (FlxG.keys.justPressed.ENTER)
 			FlxG.openURL(myFollowers[curSelected].html_url);
 
+		/* Mouse Commands */
+		if (FlxG.mouse.wheel != 0)
+			changeItem(FlxG.mouse.wheel * -1);
+
 		super.update(elapsed);
+	}
+
+	function _githubImage(url:String, ?key:Null<String>) {
+		// It will give a Request to get the Image Bytes
+		var requestBytes = Github._requestBytes(url);
+
+		// will Create a Bitmap in FlxG to Later Be Used in the Sprite
+		var bitmapImage = FlxG.bitmap.add(BitmapData.fromBytes(requestBytes), false, key);
+
+		// Return Value
+		return bitmapImage;
 	}
 }
