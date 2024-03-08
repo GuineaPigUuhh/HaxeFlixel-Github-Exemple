@@ -46,6 +46,7 @@ class PlayState extends FlxState
 
 		// New BG to Stay Cool
 		var bg:FlxSprite = new FlxSprite(0, 0, _githubImage('https://raw.githubusercontent.com/GuineaPigUuhh/GuineaPigUuhh/main/background.png'));
+		bg.color = 0xB9B9B9;
 		bg.screenCenter();
 		bg.scale.set(0.3, 0.3);
 		bg.scrollFactor.set();
@@ -99,7 +100,7 @@ class PlayState extends FlxState
 		changeItem();
 
 		// Follow Object Camera
-		FlxG.camera.follow(camObject, LOCKON, 0.5);
+		FlxG.camera.follow(camObject, LOCKON, 0.25);
 	}
 
 	function changeItem(number:Int = 0)
