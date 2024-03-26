@@ -1,6 +1,5 @@
 package;
 
-import flixel.util.FlxColor;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
@@ -8,31 +7,45 @@ import flixel.FlxState;
 import flixel.addons.display.FlxBackdrop;
 import flixel.addons.display.FlxGridOverlay;
 import flixel.math.FlxMath;
+import flixel.system.FlxAssets;
 import flixel.text.FlxText;
+import flixel.util.FlxColor;
 import haxe.Json;
-import haxegithub.Github;
+import haxegithub.Request;
+import haxegithub.utils.User;
 import openfl.display.BitmapData;
 
 using StringTools;
 
-typedef UserGroup = {
+typedef UserGroup =
+{
 	var image:FlxSprite;
 	var text:FlxText;
 }
 
 class PlayState extends FlxState
 {
-	public var _used_user:String = 'GuineaPigUuhh';
 	public var _default_notSelected:Float = 0.75;
 
 	var curSelected:Int = 0;
 
-	var myFollowers:Dynamic = null;
+	public static var myFollowers:Dynamic = null;
+	static final userView:String = "GuineaPigUuhh";
+
 	var total_users:Int = 0;
 
 	var camObject:FlxObject;
 
 	var usersAssets:Array<UserGroup> = [];
+
+	public static function reloadGithub_variables(reset = false)
+	{
+		if (reset == true)
+			myFollowers = null;
+
+		if (myFollowers == null)
+			myFollowers = User.getFollowers(userView);
+	}
 
 	override public function create()
 	{
@@ -44,30 +57,22 @@ class PlayState extends FlxState
 		camObject = new FlxObject(80, 0, 0, 0);
 		camObject.screenCenter(X);
 
-		// New BG to Stay Cool
-		var bg:FlxSprite = new FlxSprite(0, 0, _githubImage('https://raw.githubusercontent.com/GuineaPigUuhh/GuineaPigUuhh/main/background.png'));
-		bg.color = 0xB9B9B9;
-		bg.screenCenter();
-		bg.scale.set(0.3, 0.3);
-		bg.scrollFactor.set();
-		add(bg);
+		var grid = new FlxBackdrop(FlxGridOverlay.createGrid(80, 80, 160, 160, true, 0x2C00FF95, 0x0));
+		grid.scrollFactor.set();
+		grid.velocity.set(25, 25);
+		add(grid);
 
-		// it will take my User Data and parse it
-		var myUser:Dynamic = Github.getUser(_used_user);
-
-		// will get my Followers from my Github
-		myFollowers = Github._easyparse(myUser.followers_url);
+		reloadGithub_variables();
 		total_users = myFollowers.length;
 
 		// Loop to Create the Objects
 		for (i in 0...total_users)
 		{
-			// Get the Full User Data
-			var this_user = Github.getUser(myFollowers[i].login);
+			// Get the Follower Data
+			var this_user = myFollowers[i];
 
 			// new FlxSprite to The User Profile
-			var userSprite = new FlxSprite(20, 35 + (60 * i), 
-			    _githubImage(this_user.avatar_url + '&size=43', 'Follower:${this_user.login}'));
+			var userSprite = new FlxSprite(20, 35 + (60 * i), _githubImage(this_user.avatar_url + '&size=43', 'Follower:${this_user.login}'));
 
 			// new FlxText to The User Name
 			var userText = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
@@ -89,7 +94,7 @@ class PlayState extends FlxState
 		}
 
 		// Cool Text to stay cool
-		var followUser = new FlxText(0, 40, 0, myUser.login + ' Followers' + ' (Total: $total_users)', 25);
+		var followUser = new FlxText(0, 40, 0, userView + ' Followers (Total: $total_users)', 25);
 		followUser.screenCenter(X);
 		followUser.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
 		followUser.scrollFactor.set();
@@ -128,10 +133,15 @@ class PlayState extends FlxState
 		else if (FlxG.keys.justPressed.DOWN || FlxG.keys.justPressed.S)
 			changeItem(1);
 
-		// To Reset the State
-		if (FlxG.keys.justPressed.R)
-			FlxG.resetState();
-		
+		/*
+			if (FlxG.keys.justPressed.R)
+			{
+				if (FlxG.keys.pressed.SHIFT)
+					reloadGithub_variables(true);
+				FlxG.resetState();
+			}
+		 */
+
 		// When you press ENTER on the keyboard, you will enter the user's Github
 		if (FlxG.keys.justPressed.ENTER)
 			FlxG.openURL(myFollowers[curSelected].html_url);
@@ -143,14 +153,6 @@ class PlayState extends FlxState
 		super.update(elapsed);
 	}
 
-	function _githubImage(url:String, ?key:Null<String>) {
-		// It will give a Request to get the Image Bytes
-		var requestBytes = Github._requestBytes(url);
-
-		// will Create a Bitmap in FlxG to Later Be Used in the Sprite
-		var bitmapImage = FlxG.bitmap.add(BitmapData.fromBytes(requestBytes), false, key);
-
-		// Return Value
-		return bitmapImage;
-	}
+	function _githubImage(url:String, ?key:Null<String>)
+		return FlxG.bitmap.add(BitmapData.fromBytes(Request.requestBytes(url)), true, key);
 }
