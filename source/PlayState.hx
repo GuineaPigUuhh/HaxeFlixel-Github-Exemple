@@ -72,7 +72,10 @@ class PlayState extends FlxState
 			var this_user = myFollowers[i];
 
 			// new FlxSprite to The User Profile
-			var userSprite = new FlxSprite(20, 35 + (60 * i), _githubImage(this_user.avatar_url + '&size=43', 'Follower:${this_user.login}'));
+			var userSprite = new FlxSprite(15, 25 + (60 * i), _githubImage(this_user.avatar_url, 'Follower:${this_user.login}'));
+			userSprite.setGraphicSize(55, 55);
+			userSprite.updateHitbox();
+			userSprite.antialiasing = true;
 
 			// new FlxText to The User Name
 			var userText = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
