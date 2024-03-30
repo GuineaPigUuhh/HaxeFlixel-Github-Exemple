@@ -1,5 +1,6 @@
 package;
 
+import haxegithub.GithubAPI;
 import flixel.FlxG;
 import flixel.FlxObject;
 import flixel.FlxSprite;
@@ -11,9 +12,9 @@ import flixel.system.FlxAssets;
 import flixel.text.FlxText;
 import flixel.util.FlxColor;
 import haxe.Json;
-import haxegithub.Request;
 import haxegithub.utils.User;
-import openfl.display.BitmapData;
+import haxegithub.flixel.GithubUtil;
+import haxegithub.flixel.shaders.CircleAvatarShader;
 
 using StringTools;
 
@@ -25,7 +26,7 @@ typedef UserGroup =
 
 class PlayState extends FlxState
 {
-	public var _default_notSelected:Float = 0.75;
+	public var _default_notSelected:Float = 0.55;
 
 	var curSelected:Int = 0;
 
@@ -72,10 +73,11 @@ class PlayState extends FlxState
 			var this_user = myFollowers[i];
 
 			// new FlxSprite to The User Profile
-			var userSprite = new FlxSprite(15, 25 + (60 * i), _githubImage(this_user.avatar_url, 'Follower:${this_user.login}'));
+			var userSprite = new FlxSprite(15, 25 + (60 * i), GithubUtil.image(this_user.avatar_url, true, 'USER:${this_user.login}'));
 			userSprite.setGraphicSize(55, 55);
 			userSprite.updateHitbox();
 			userSprite.antialiasing = true;
+			userSprite.shader = new CircleAvatarShader().shader; // Circle Profile
 
 			// new FlxText to The User Name
 			var userText = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
@@ -155,7 +157,4 @@ class PlayState extends FlxState
 
 		super.update(elapsed);
 	}
-
-	function _githubImage(url:String, ?key:Null<String>)
-		return FlxG.bitmap.add(BitmapData.fromBytes(Request.requestBytes(url)), true, key);
 }
