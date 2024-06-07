@@ -15,6 +15,9 @@ import haxe.Json;
 import haxegithub.utils.User;
 import haxegithub.flixel.GithubUtil;
 import haxegithub.flixel.shaders.CircleAvatarShader;
+import flixel.system.FlxAssets.FlxShader;
+import openfl.display.BitmapData;
+import haxegithub.GithubAPI;
 
 using StringTools;
 
@@ -24,13 +27,34 @@ typedef UserGroup =
 	var text:FlxText;
 }
 
+class CircleShader extends FlxShader
+{
+	@:glFragmentSource('
+    // Credits to FNF Codename Engine Team!
+
+    #pragma header
+
+    void main() {
+        float len = length(openfl_TextureCoordv - vec2(0.5, 0.5));
+        float r = 0.5 - (1.0 / openfl_TextureSize.x);
+        vec4 c = flixel_texture2D(bitmap, openfl_TextureCoordv);
+        vec4 color = mix(vec4(0.0, 0.0, 0.0, 0.5), c, c.a);
+        gl_FragColor = color * clamp(1.0 - ((len - r) * openfl_TextureSize.x), 0.0, 1.0);
+    }
+    ')
+	public function new()
+	{
+		super();
+	}
+}
+
 class PlayState extends FlxState
 {
 	public var _default_notSelected:Float = 0.55;
 
 	var curSelected:Int = 0;
 
-	public static var myFollowers:Dynamic = null;
+	public static var myFollowers:Array<Dynamic> = null;
 	static final userView:String = "GuineaPigUuhh";
 
 	var total_users:Int = 0;
@@ -70,36 +94,39 @@ class PlayState extends FlxState
 		for (i in 0...total_users)
 		{
 			// Get the Follower Data
-			var this_user = myFollowers[i];
+			var this_user:Dynamic = myFollowers[i];
 
-			// new FlxSprite to The User Profile
-			var userSprite = new FlxSprite(15, 25 + (60 * i), GithubUtil.image(this_user.avatar_url, true, 'USER:${this_user.login}'));
-			userSprite.setGraphicSize(55, 55);
-			userSprite.updateHitbox();
-			userSprite.antialiasing = true;
-			userSprite.shader = new CircleAvatarShader().shader; // Circle Profile
+			var avatar:FlxSprite = new FlxSprite(15, 25 + (60 * i));
+			avatar.makeGraphic(55, 55, FlxColor.WHITE);
+			avatar.antialiasing = true;
+			avatar.shader = new CircleShader();
+			sys.thread.Thread.create(() ->
+			{
+				avatar.loadGraphic(requestImg(this_user.avatar_url, 'Follower:${this_user.login}'));
+				avatar.setGraphicSize(55, 55);
+				avatar.updateHitbox();
+			});
 
 			// new FlxText to The User Name
-			var userText = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
-			userText.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
+			var text = new FlxText(80, 40 + (60 * i), 0, this_user.login, 20);
+			text.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
 
 			// set Alpha
-			userSprite.alpha = _default_notSelected;
-			userText.alpha = _default_notSelected;
+			avatar.alpha = _default_notSelected;
+			text.alpha = _default_notSelected;
 
 			// Add Items
-			add(userSprite);
-			add(userText);
+			add(avatar);
+			add(text);
 
 			// Import Assets to usersAssets
 			usersAssets.push({
-				image: userSprite,
-				text: userText
+				image: avatar,
+				text: text
 			});
 		}
-
 		// Cool Text to stay cool
-		var followUser = new FlxText(0, 40, 0, userView + ' Followers (Total: $total_users)', 25);
+		var followUser = new FlxText(0, 40, 0, userView + ' Followers (Total Loaded: $total_users)', 22);
 		followUser.screenCenter(X);
 		followUser.setBorderStyle(SHADOW, FlxColor.BLACK, 2, 1);
 		followUser.scrollFactor.set();
@@ -156,5 +183,12 @@ class PlayState extends FlxState
 			changeItem(FlxG.mouse.wheel * -1);
 
 		super.update(elapsed);
+	}
+
+	function requestImg(url:String, ?key:Null<String>)
+	{
+		var img = new haxe.Http(url);
+		img.request();
+		return FlxG.bitmap.add(BitmapData.fromBytes(img.responseBytes), true, key);
 	}
 }
